@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink-950: #060810;
+  --ink-900: #0c1021;
+  --ink-800: #121829;
+  --ink-700: #1a2235;
+  --gold-400: #f4c842;
+  --jade-400: #34d399;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--ink-950);
+  color: #e2e8f0;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Grain texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--ink-900); }
+::-webkit-scrollbar-thumb { background: #2d3a52; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3d4f6e; }
+
+/* Glass card base */
+.glass {
+  background: rgba(18, 24, 41, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-hover {
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+.glass-hover:hover {
+  background: rgba(26, 34, 53, 0.75);
+  border-color: rgba(244, 200, 66, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Gold accent glow */
+.glow-gold {
+  box-shadow: 0 0 20px rgba(244, 200, 66, 0.15), 0 0 60px rgba(244, 200, 66, 0.05);
+}
+
+/* Shimmer loading effect */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.02) 25%,
+    rgba(255,255,255,0.06) 50%,
+    rgba(255,255,255,0.02) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Drop zone active */
+.drop-active {
+  border-color: var(--gold-400) !important;
+  background: rgba(244, 200, 66, 0.04) !important;
+}
+
+/* Impact badges */
+.badge-high { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+.badge-medium { background: rgba(244, 200, 66, 0.12); color: #f4c842; border: 1px solid rgba(244,200,66,0.2); }
+.badge-low { background: rgba(52, 211, 153, 0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.2); }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up {
+  animation: fadeUp 0.5s ease forwards;
+}
