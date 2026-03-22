@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: legislative-analyzer-api
+    env: python
+    region: singapore  # closest to India
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+    - key: GOOGLE_API_KEY
+      sync: false           # set value in dashboard secret
+    - key: ALLOWED_ORIGINS
+      value: "http://localhost:3000,https://your-frontend-domain.com"
+    - key: PYTHON_VERSION
+      value: "3.11.0"
+    healthCheckPath: /health
+    autoDeploy: true
