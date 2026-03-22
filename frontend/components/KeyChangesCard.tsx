@@ -44,12 +44,12 @@ export default function KeyChangesCard({ changes }: KeyChangesCardProps) {
               transition={{ delay: i * 0.08 }}
             >
               <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-medium text-white/90 leading-snug">{change.title}</p>
+                <p className="text-sm font-medium text-white/90 leading-snug break-words overflow-wrap-anywhere">{change.title}</p>
                 <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${impact.cls}`}>
                   {impact.label}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-2 leading-relaxed">{change.description}</p>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed break-words overflow-wrap-anywhere">{change.description}</p>
             </motion.div>
           );
         })}

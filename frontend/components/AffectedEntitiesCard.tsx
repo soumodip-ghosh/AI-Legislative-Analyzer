@@ -37,17 +37,22 @@ export default function AffectedEntitiesCard({ entities }: AffectedEntitiesCardP
       <div className="flex flex-col gap-3">
         {entities.map((e, i) => (
           <motion.div
-            key={i}
-            className="flex items-start gap-3 p-3.5 rounded-xl bg-white/[0.025] border border-white/5"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07 }}
-          >
-            <span className={`text-xs px-2.5 py-1 rounded-lg border font-medium shrink-0 ${ENTITY_COLORS[i % ENTITY_COLORS.length]}`}>
-              {e.entity}
-            </span>
-            <p className="text-xs text-slate-400 leading-relaxed pt-0.5">{e.how}</p>
-          </motion.div>
+              key={i}
+              className="flex items-start gap-3 p-3.5 rounded-xl bg-white/[0.025] border border-white/5"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.07 }}
+            >
+              <span
+                className={`text-xs px-2.5 py-1 rounded-lg border font-medium shrink-0 max-w-[40%]`}
+              >
+                {e.entity}
+              </span>
+
+              <p className="text-xs text-slate-400 leading-relaxed flex-1 break-words">
+                {e.how}
+              </p>
+            </motion.div>
         ))}
       </div>
     </div>

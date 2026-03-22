@@ -29,7 +29,7 @@ export default function SummaryCard({
           </span>
           <span className="text-xs text-slate-500">· Summary</span>
         </div>
-        <p className="text-base text-white/90 leading-relaxed font-display">{summary}</p>
+        <p className="text-sm sm:text-base text-white/90 leading-relaxed font-display break-words overflow-wrap-anywhere">{summary}</p>
       </motion.div>
 
       {/* Simplified for citizens */}
@@ -46,7 +46,7 @@ export default function SummaryCard({
             </div>
             <p className="text-xs font-medium text-amber-400">We simplified this for you</p>
           </div>
-          <p className="text-sm text-slate-300 leading-relaxed">{simplifiedExplanation}</p>
+          <p className="text-sm text-slate-300 leading-relaxed break-words overflow-wrap-anywhere">{simplifiedExplanation}</p>
         </motion.div>
       )}
 
@@ -64,7 +64,7 @@ export default function SummaryCard({
             </div>
             <p className="text-xs font-medium text-scarlet-400">Penalties & Compliance</p>
           </div>
-          <p className="text-sm text-slate-300 leading-relaxed">{penaltiesAndCompliance}</p>
+          <p className="text-sm text-slate-300 leading-relaxed break-words overflow-wrap-anywhere">{penaltiesAndCompliance}</p>
         </motion.div>
       )}
     </div>

@@ -5,12 +5,26 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Verify required API keys are loaded
+if not os.getenv("GOOGLE_API_KEY"):
+    raise RuntimeError(
+        "GOOGLE_API_KEY not found in environment variables. "
+        "Please set it in your .env file or as an environment variable."
+    )
 
 from routes.analyze import router as analyze_router
 from middleware.rate_limit import RateLimitMiddleware
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+
+logger.info("✓ Environment variables loaded successfully")
+logger.info(f"✓ GOOGLE_API_KEY found (length: {len(os.getenv('GOOGLE_API_KEY', ''))})")
 
 
 @asynccontextmanager

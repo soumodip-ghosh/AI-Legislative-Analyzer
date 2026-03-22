@@ -123,26 +123,54 @@ def chunk_by_section(text: str, max_chunk_chars: int = 3000) -> list[str]:
     return [c for c in chunks if len(c) > 50]
 
 
-def compress(text: str, max_output_tokens: int = 6000) -> CompressionResult:
+def compress(text: str, max_output_tokens: int = None) -> CompressionResult:
     """
-    Main compression pipeline:
-    1. Strip filler
-    2. Extract key facts
-    3. Chunk semantically
-    4. Select highest-value chunks to fit token budget
+    Main compression pipeline with adaptive token budgeting:
+    1. Estimate document size
+    2. Apply aggressive compression for 100K+ token documents
+    3. Strip filler and extract key facts
+    4. Chunk semantically and rank by value
+    5. Select highest-value chunks to fit token budget
+    
+    Args:
+        text: Input document text
+        max_output_tokens: Max tokens for output. If None, auto-calculate based on input size.
+                         For 100K+ tokens, defaults to ~4000 tokens (aggressive compression)
     """
     original_tokens = rough_token_count(text)
+    
+    # Adaptive token budget based on document size
+    if max_output_tokens is None:
+        if original_tokens > 100000:
+            max_output_tokens = 4000  # Aggressive: ~96% compression for 100K+ docs
+            logger.info(f"Large document detected ({original_tokens} tokens). Using aggressive compression.")
+        elif original_tokens > 50000:
+            max_output_tokens = 5000  # ~90% compression for 50K-100K docs
+        elif original_tokens > 20000:
+            max_output_tokens = 6000  # Standard compression for 20K-50K docs
+        else:
+            max_output_tokens = 8000  # Less aggressive for smaller docs
+    
     facts = extract_key_facts(text)
 
     cleaned = strip_legal_filler(text)
-    chunks = chunk_by_section(cleaned)
+    chunks = chunk_by_section(cleaned, max_chunk_chars=2000)  # Smaller chunks for better ranking
 
     # Score chunks by density of meaningful terms
     def chunk_score(chunk: str) -> float:
         score = 0
         for pattern in MEANINGFUL_PATTERNS.values():
-            score += len(pattern.findall(chunk))
-        # Prefer earlier sections (they usually contain key provisions)
+            matches = pattern.findall(chunk)
+            score += len(matches) if matches else 0
+        
+        # Boost score for sections with penalties, financial info, dates
+        if re.search(r"(fine|penalty|imprisonment|punishable)", chunk, re.IGNORECASE):
+            score += 50
+        if re.search(r"(₹|rs\.?|rupees|crore|lakh)", chunk, re.IGNORECASE):
+            score += 40
+        if re.search(r"\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)", chunk, re.IGNORECASE):
+            score += 30
+        
         return score
 
     ranked = sorted(enumerate(chunks), key=lambda x: chunk_score(x[1]), reverse=True)
@@ -150,22 +178,27 @@ def compress(text: str, max_output_tokens: int = 6000) -> CompressionResult:
     # Build compressed output within token budget
     selected_chunks = []
     budget = max_output_tokens * 4  # convert tokens → chars
+    current_size = 0
 
     for _, chunk in ranked:
-        if len("\n\n".join(selected_chunks)) + len(chunk) < budget:
+        chunk_size = len(chunk)
+        if current_size + chunk_size < budget:
             selected_chunks.append(chunk)
+            current_size += chunk_size + 4  # account for "\n\n"
 
     # Restore original order for coherence
-    original_indices = {c: i for i, (_, c) in enumerate(ranked)}
-    selected_chunks.sort(key=lambda c: original_indices.get(c, 0))
+    original_indices = {id(c): i for i, (_, c) in enumerate(ranked)}
+    selected_chunks.sort(key=lambda c: [i for i, (_, ch) in enumerate(ranked) if id(ch) == id(c)][0] if any(id(ch) == id(c) for _, ch in ranked) else 999)
 
     compressed = "\n\n".join(selected_chunks)
     compressed_tokens = rough_token_count(compressed)
     tokens_saved = max(0, original_tokens - compressed_tokens)
+    compression_ratio = round((1 - compressed_tokens/max(original_tokens, 1)) * 100)
 
     logger.info(
-        f"Compression: {original_tokens} → {compressed_tokens} tokens "
-        f"({tokens_saved} saved, {round((1 - compressed_tokens/max(original_tokens,1))*100)}% reduction)"
+        f"Compression: {original_tokens:,} → {compressed_tokens:,} tokens "
+        f"(saved {tokens_saved:,}, {compression_ratio}% reduction, "
+        f"{len(selected_chunks)} chunks selected from {len(chunks)} total)"
     )
 
     return CompressionResult(

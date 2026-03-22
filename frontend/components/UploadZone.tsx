@@ -12,7 +12,7 @@ export default function UploadZone({ onFile, disabled }: UploadZoneProps) {
   const [error, setError] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const validateAndSet = (file: File) => {
+  const validateAndSet = useCallback((file: File) => {
     setError("");
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (!["pdf", "docx"].includes(ext || "")) {
@@ -25,7 +25,7 @@ export default function UploadZone({ onFile, disabled }: UploadZoneProps) {
     }
     setSelectedFile(file);
     onFile(file);
-  };
+  }, [onFile]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -35,7 +35,7 @@ export default function UploadZone({ onFile, disabled }: UploadZoneProps) {
       const file = e.dataTransfer.files[0];
       if (file) validateAndSet(file);
     },
-    [disabled]
+    [disabled, validateAndSet]
   );
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {

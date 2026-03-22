@@ -12,6 +12,7 @@ import AffectedEntitiesCard from "../components/AffectedEntitiesCard";
 import FinancialImpactCard from "../components/FinancialImpactCard";
 import TimelineCard from "../components/TimelineCard";
 import TokenStats from "../components/TokenStats";
+import ChatCard from "../components/ChatCard";
 
 type Step = "parse" | "compress" | "analyze" | "done";
 
@@ -29,6 +30,7 @@ interface AnalysisResult {
   compressed_tokens: number;
   is_legal: boolean;
   from_cache: boolean;
+  doc_hash: string;
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
@@ -79,7 +81,7 @@ export default function Home() {
     try {
       const { data } = await axios.post<AnalysisResult>(`${API_BASE}/analyze`, form, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 120_000,
+        timeout: 300_000,
       });
 
       finish();
@@ -130,7 +132,7 @@ export default function Home() {
           }}
         />
 
-        <div className="relative z-10 max-w-5xl mx-auto px-4 py-12 sm:py-16">
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
           {/* Header */}
           <motion.header
             className="text-center mb-14"
@@ -153,7 +155,7 @@ export default function Home() {
             </h1>
             <p className="text-slate-400 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
               Upload any parliamentary bill, act, or policy document.
-              We'll extract what actually matters — in plain English.
+              We&apos;ll extract what actually matters — in plain English.
             </p>
           </motion.header>
 
@@ -258,7 +260,7 @@ export default function Home() {
                       <div>
                         <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Analysis Complete</p>
                         <h2 className="font-display text-2xl sm:text-3xl font-bold text-white">
-                          Here's what actually matters
+                          Here&apos;s what actually matters
                         </h2>
                       </div>
                       <button
@@ -290,14 +292,19 @@ export default function Home() {
                     </div>
 
                     {/* Two column grid for detail cards */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5 auto-rows-fr">
                       <KeyChangesCard changes={result.key_changes} />
                       <AffectedEntitiesCard entities={result.affected_entities} />
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 auto-rows-fr">
                       <FinancialImpactCard impact={result.financial_impact} />
                       <TimelineCard timeline={result.timeline} />
+                    </div>
+
+                    {/* Chat interface */}
+                    <div className="mb-6">
+                      <ChatCard docHash={result.doc_hash} />
                     </div>
 
                     <p className="text-center text-xs text-slate-600 mt-8">

@@ -27,7 +27,7 @@ export default function FinancialImpactCard({ impact }: FinancialImpactCardProps
         </div>
       </div>
 
-      <p className="text-sm text-slate-300 leading-relaxed mb-4">{impact.description}</p>
+      <p className="text-sm text-slate-300 leading-relaxed mb-4 break-words overflow-wrap-anywhere">{impact.description}</p>
 
       {/* Key figures */}
       {impact.figures?.length > 0 && (
@@ -50,13 +50,13 @@ export default function FinancialImpactCard({ impact }: FinancialImpactCardProps
         {impact.who_pays && (
           <div className="p-3 rounded-xl bg-scarlet-400/5 border border-scarlet-400/15">
             <p className="text-xs text-scarlet-400 font-medium mb-1">Who Pays</p>
-            <p className="text-xs text-slate-400 leading-relaxed">{impact.who_pays}</p>
+            <p className="text-xs text-slate-400 leading-relaxed break-words overflow-wrap-anywhere">{impact.who_pays}</p>
           </div>
         )}
         {impact.who_benefits && (
           <div className="p-3 rounded-xl bg-jade-400/5 border border-jade-400/15">
             <p className="text-xs text-jade-400 font-medium mb-1">Who Benefits</p>
-            <p className="text-xs text-slate-400 leading-relaxed">{impact.who_benefits}</p>
+            <p className="text-xs text-slate-400 leading-relaxed break-words overflow-wrap-anywhere">{impact.who_benefits}</p>
           </div>
         )}
       </div>

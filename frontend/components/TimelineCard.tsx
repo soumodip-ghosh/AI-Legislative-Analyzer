@@ -42,7 +42,7 @@ export default function TimelineCard({ timeline }: TimelineCardProps) {
               <div className="absolute -left-[17px] top-1.5 w-2 h-2 rounded-full bg-violet-400/60 border border-violet-400/30" />
 
               <p className="text-xs font-medium text-violet-300 mb-1 font-mono">{item.date}</p>
-              <p className="text-sm text-slate-300 leading-relaxed">{item.event}</p>
+              <p className="text-sm text-slate-300 leading-relaxed break-words overflow-wrap-anywhere">{item.event}</p>
             </motion.div>
           ))}
         </div>
