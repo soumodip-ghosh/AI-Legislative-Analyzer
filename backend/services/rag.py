@@ -1,16 +1,13 @@
 import logging
 import os
 from typing import Optional
-
-import faiss
-import numpy as np
-import google.generativeai as genai
+from langchain_core.messages import HumanMessage
 
 logger = logging.getLogger(__name__)
 
 # These are imported lazily so the server starts even if embeddings are slow
 _embeddings = None
-_llm_initialized = False
+_llm = None
 
 
 def _get_api_key() -> str:
@@ -25,79 +22,57 @@ def _get_api_key() -> str:
     return api_key
 
 
-def _initialize_llm():
-    global _llm_initialized
-    if not _llm_initialized:
-        genai.configure(api_key=_get_api_key())
-        _llm_initialized = True
-        logger.info("✓ LLM initialized with Google Generative AI (Gemini 2.5 Flash)")
-
-
 def get_embeddings():
     global _embeddings
     if _embeddings is None:
-        from sentence_transformers import SentenceTransformer
+        from langchain_community.embeddings import HuggingFaceEmbeddings
 
         try:
-            _embeddings = SentenceTransformer("all-MiniLM-L6-v2")
-            logger.info("✓ Embeddings initialized with SentenceTransformer (all-MiniLM-L6-v2)")
+            _embeddings = HuggingFaceEmbeddings(
+                model_name="all-MiniLM-L6-v2",  # Fast, lightweight model ~22MB
+                model_kwargs={"device": "cpu"},  # Use CPU to avoid GPU requirements
+                encode_kwargs={"normalize_embeddings": True}
+            )
+            logger.info("✓ Embeddings initialized with HuggingFace (all-MiniLM-L6-v2)")
         except Exception as e:
             logger.error(f"Failed to initialize embeddings: {e}")
             raise
     return _embeddings
 
 
+def get_llm():
+    global _llm
+    if _llm is None:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        try:
+            _llm = ChatGoogleGenerativeAI(
+                model="gemini-2.5-flash",  # Latest free tier model - fast and capable
+                temperature=0.1,           # low temp for factual extraction
+                google_api_key=_get_api_key(),
+                request_timeout=60,
+            )
+            logger.info("✓ LLM initialized with Google Generative AI (Gemini 2.5 Flash)")
+        except ValueError as e:
+            logger.error(f"Failed to initialize LLM: {e}")
+            raise
+    return _llm
+
+
 def build_vectorstore(chunks: list[str]):
     """Build an in-memory FAISS index from text chunks. One-shot, no persistence needed."""
-    model = get_embeddings()
+    from langchain_community.vectorstores import FAISS
+    from langchain_core.documents import Document
 
-    chunk_embeddings = model.encode(
-        chunks,
-        show_progress_bar=False,
-        convert_to_numpy=True,
-        normalize_embeddings=True,
-    )
-    index = faiss.IndexFlatIP(chunk_embeddings.shape[1])
-    index.add(np.array(chunk_embeddings, dtype=np.float32))
-
-    return {"index": index, "docs": chunks}
+    docs = [Document(page_content=chunk, metadata={"chunk_idx": i}) for i, chunk in enumerate(chunks)]
+    vectorstore = FAISS.from_documents(docs, get_embeddings())
+    return vectorstore
 
 
 def retrieve_relevant_chunks(vectorstore, query: str, k: int = 5) -> list[str]:
     """Pull the most semantically relevant chunks for a given query."""
-    model = get_embeddings()
-    query_embedding = model.encode(
-        [query],
-        show_progress_bar=False,
-        convert_to_numpy=True,
-        normalize_embeddings=True,
-    ).astype(np.float32)
-
-    scores, ids = vectorstore["index"].search(query_embedding, k)
-    return [vectorstore["docs"][int(i)] for i in ids[0] if i != -1]
-
-
-def invoke_llm(prompt: str) -> str:
-    _initialize_llm()
-    response = genai.chat.completions.create(
-        model="gemini-2.5-flash",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.1,
-        max_output_tokens=1500,
-    )
-
-    content = ""
-    # `response` may be dict-like depending on package version
-    if hasattr(response, "choices") and response.choices:
-        message = response.choices[0].get("message", {})
-        if isinstance(message, dict):
-            content = message.get("content", "")
-        else:
-            content = getattr(message, "get", lambda *a, **k: "")("content", "")
-    else:
-        content = getattr(response, "last", "") or ""
-
-    return content.strip()
+    results = vectorstore.similarity_search(query, k=k)
+    return [r.page_content for r in results]
 
 
 ANALYSIS_PROMPT = """You are a legal analyst helping Indian citizens understand legislation.
@@ -152,6 +127,7 @@ def analyze_with_rag(
     - Prioritizes high-value chunks (penalties, amounts, dates)
     - Removes redundancy to fit within LLM token limits
     """
+    from langchain_core.messages import HumanMessage
 
     # Adaptive context sizing based on original document size
     if original_token_count > 100000:
@@ -201,6 +177,8 @@ def analyze_with_rag(
 
     prompt = ANALYSIS_PROMPT.format(document_text=combined, extracted_facts=facts_str)
 
+    llm = get_llm()
+    
     # Log context information for large documents
     if original_token_count > 100000:
         prompt_tokens_estimate = rough_token_count(prompt)
@@ -210,11 +188,11 @@ def analyze_with_rag(
             f"Compressed≈{len(combined)//4:,} tokens, "
             f"Prompt≈{prompt_tokens_estimate:,} tokens"
         )
-
-    response_text = invoke_llm(prompt)
+    
+    response = llm.invoke([HumanMessage(content=prompt)])
 
     import json
-    text = response_text.strip()
+    text = response.content.strip()
     # Strip any accidental markdown fences
     if text.startswith("```"):
         text = text.split("```")[1]
@@ -241,11 +219,12 @@ def analyze_with_rag(
 def ask_question(compressed_text: str, chunks: list, question: str) -> str:
     """Answer a follow-up question using RAG on the compressed document."""
     vectorstore = build_vectorstore(chunks)
-
+    
     # Retrieve relevant chunks
-    relevant_docs = retrieve_relevant_chunks(vectorstore, question, k=5)
-    combined = "\n\n".join(relevant_docs)
-
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+    relevant_docs = retriever.invoke(question)
+    combined = "\n\n".join([doc.page_content for doc in relevant_docs])
+    
     # Create question-answering prompt
     prompt = f"""
 You are a legal document assistant. Answer the user's question based on the provided document context.
@@ -257,9 +236,11 @@ User Question: {question}
 
 Provide a clear, concise answer based only on the document content. If the answer isn't in the document, say so.
 """
-
-    response_text = invoke_llm(prompt)
-    return response_text.strip()
+    
+    llm = get_llm()
+    response = llm.invoke([HumanMessage(content=prompt)])
+    
+    return response.content.strip()
 
 
 def rough_token_count(text: str) -> int:
