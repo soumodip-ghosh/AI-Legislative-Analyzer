@@ -12,11 +12,11 @@ _llm = None
 def get_embeddings():
     global _embeddings
     if _embeddings is None:
-        from langchain_openai import OpenAIEmbeddings
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-        _embeddings = OpenAIEmbeddings(
-            model="text-embedding-3-small",  # smaller + cheaper
-            openai_api_key=os.environ["OPENAI_API_KEY"],
+        _embeddings = GoogleGenerativeAIEmbeddings(
+            model="models/embedding-001",  # free tier model
+            google_api_key=os.environ["GOOGLE_API_KEY"],
         )
     return _embeddings
 
@@ -24,12 +24,12 @@ def get_embeddings():
 def get_llm():
     global _llm
     if _llm is None:
-        from langchain_openai import ChatOpenAI
+        from langchain_google_genai import ChatGoogleGenerativeAI
 
-        _llm = ChatOpenAI(
-            model="gpt-4o-mini",  # fast and cheap for structured extraction
-            temperature=0.1,      # low temp for factual extraction
-            openai_api_key=os.environ["OPENAI_API_KEY"],
+        _llm = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash",  # free tier model - fast and capable
+            temperature=0.1,            # low temp for factual extraction
+            google_api_key=os.environ["GOOGLE_API_KEY"],
             request_timeout=60,
         )
     return _llm
